@@ -15,53 +15,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-const ETF = `
-terraform {
-	backend "consul" {
-		address = "localhost:8500"
-		path = "{{.StatePath}}"
-	}
-}
-
-resource "local_file" "{{.ResourceName}}" {
-	content="{{.Content}}"
-	filename="{{.Filename}}"
-}
-`
-
 var (
 	app *cli.App
 )
-
-/*
-
-* Fetch module template from Consul ☑
-* Fetch Variables from Consul ☑
-* If needed, secrets are expected to be handled by Nomad
-* Generate terraform file combining template and variables ☑
-* Run terraform init && apply ☑
-* Upload plan to Consul ☑
-
-If autoapply is true:
-* Run Terraform apply
-Else:
-* abort
-
-Uses Consul for remote state storage. This is done to handle concurrency as
-well as to maintain the native terraform plan/apply state checking.
-
-TODO:
-* Integrate workspaces?
-* Build working directory from name and resource?
- * Or use /tmp/+Consul value ?
- * Main thing is the absolute path must be the
-   same. If run in Nomad, it will be rooted/contained so there should be no risk
-   of leakage.
- * Look at using Afero to do it all in memory - the problem is go-getter
-   downloading the version to local filesystem, though that may be an
-   acceptable exception. The main question is whether I can execute between the two.
-
-*/
 
 // TFModule needs to be redone to be specific for each resource type?
 type TFModule struct {
