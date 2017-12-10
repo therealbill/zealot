@@ -1,0 +1,13 @@
+terraform {
+    backend "consul" {
+        address = "localhost:8500"
+        path = "{{.StatePath}}"
+    }
+}
+
+{{if IsModuleValid}}
+resource "local_file" "{{.ResourceName}}" {
+    content="{{.Content}}"
+    filename="{{.Filename}}"
+}
+{{end}}

@@ -35,12 +35,12 @@ var (
 
 /*
 
-* Fetch module template from Consul
-* Fetch Variables from Consul
+* Fetch module template from Consul ☑
+* Fetch Variables from Consul ☑
 * If needed, secrets are expected to be handled by Nomad
-* Generate terraform file combining template and variables
-* Run terraform init && apply
-* Upload plan to Consul
+* Generate terraform file combining template and variables ☑
+* Run terraform init && apply ☑
+* Upload plan to Consul ☑
 
 If autoapply is true:
 * Run Terraform apply
@@ -57,7 +57,9 @@ TODO:
  * Main thing is the absolute path must be the
    same. If run in Nomad, it will be rooted/contained so there should be no risk
    of leakage.
- * Look at using Afero to do it all in memory - the problem is go-getter downloading the version
+ * Look at using Afero to do it all in memory - the problem is go-getter
+   downloading the version to local filesystem, though that may be an
+   acceptable exception. The main question is whether I can execute between the two.
 
 */
 
@@ -102,23 +104,30 @@ func (t *TerraformSequence) getTemplate() (err error) {
 	return nil
 }
 
+func (t *TerraformSequence) ModuleIsValid() bool {
+	if t.Module.ResourceName == "" {
+		return false
+	}
+	if t.Module.Filename == "" {
+		return false
+	}
+	return true
+}
+
 func (t *TerraformSequence) getDataFromConsul() (err error) {
 	t.Config = NewJobConfig(t.Name, "zealot")
 	t.AppConf = NewAppConfig("zealot")
 
 	t.Config.Connect()
 
-	t.Module.ResourceName, err = t.Config.GetString("module/ResourceName", true)
-	abortOnError(err)
-	t.Module.Content, err = t.Config.GetString("module/Content", true)
-	abortOnError(err)
+	t.Module.ResourceName, _ = t.Config.GetString("module/ResourceName", true)
+	t.Module.Content, _ = t.Config.GetString("module/Content", true)
+	t.Module.Filename, _ = t.Config.GetString("module/Filename", true)
+	t.Module.StatePath = t.Config.GetBase() + "state"
+
 	t.WorkingDir, err = t.Config.GetString("WorkingDir", true)
 	abortOnError(err)
-	t.Module.Filename, err = t.Config.GetString("module/Filename", true)
-	abortOnError(err)
 	t.Autoapply, _ = t.Config.GetBool("autoapply", true)
-	t.Module.StatePath = t.Config.GetBase() + "state"
-	abortOnError(err)
 	t.getTemplate()
 	return err
 }
@@ -140,7 +149,8 @@ func (t *TerraformSequence) getTerraform() error {
 func (t *TerraformSequence) GenerateTemplate() error {
 	var err error
 	var b bytes.Buffer
-	tmpl := template.Must(template.New("tffile").Parse(t.Template))
+	fmap := template.FuncMap{"IsModuleValid": t.ModuleIsValid}
+	tmpl := template.Must(template.New("tffile").Funcs(fmap).Parse(t.Template))
 	if err != nil {
 		log.Fatal(err)
 	}
