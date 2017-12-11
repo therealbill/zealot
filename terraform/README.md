@@ -1,6 +1,6 @@
 # Terraforming Consul
 
-NOTE: I'll probably move these around a bit. Th emain question is whether we
+NOTE: I'll probably move these around a bit. The main question is whether wI
 want a state for Zealot or one for each resource type. I lean heavily toward
 Zealot to keep it simple and concise.
 
